@@ -3,8 +3,6 @@ import httpx
 
 import utils
 
-JELLYFIN_URL = "https://jellyfin.nekotintin.ovh"
-
 async def cmd_jellyfin_search(bot, room: MatrixRoom, event: RoomMessageText, args: list):
 	if not args:
 		await utils.send_msg(bot, room, "Utilisation : !jfs [requête]")
@@ -16,12 +14,12 @@ async def cmd_jellyfin_search(bot, room: MatrixRoom, event: RoomMessageText, arg
 		"IncludeItemTypes": "Movie,Series",
 		"Limit": 5,
 		"Recursive": "true",
-		"api_key": "b9f72baf269046d083822ad6c6a2f534"
+		"api_key": bot.jellyfin_api_key
 	}
 
 	async with httpx.AsyncClient() as client:
 		try:
-			resp = await client.get(f"{JELLYFIN_URL}/Items", params=params)
+			resp = await client.get(f"{bot.jellyfin_url}/Items", params=params)
 			if resp.status_code != 200:
 				await utils.send_msg(bot, room, " ❌ Aucune réponse du serveur Jellyfin.")
 				return

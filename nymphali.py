@@ -14,6 +14,8 @@ class NymphaliBot:
 		self.prefix = prefix
 		self.client	= None
 		self.state = True
+		self.jellyfin_url = None
+		self.jellyfin_api_key = None
  
 	async def login(self):
 		async with aiofiles.open(self.credential_file, "r") as f:
@@ -24,6 +26,8 @@ class NymphaliBot:
 		self.client.access_token = config["access_token"]
 		self.client.user_id = config["user_id"]
 		self.client.device_id = config["device_id"]
+		self.jellyfin_url = config["jellyfin_url"]
+		self.jellyfin_api_key = config["jellyfin_api_key"]
  
 		print("Nymphali Bot est connecté en tant que " + config["user_id"])
 
