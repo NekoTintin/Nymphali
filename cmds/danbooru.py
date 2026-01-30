@@ -1,47 +1,44 @@
 from nio import MatrixRoom, RoomMessageText, UploadResponse
 import httpx
-from danbooru import search_on_danbooru
 import mimetypes
 import io
 from PIL import Image
 
-import utils
-import cmds.jellyfin
+import utils.utils as utils
 
+async def create_request(tags: str, nsfw: bool) -> dict:
+	url = "https://danbooru.donmai.us/posts/random.json"
+	params = { "tags": tags }
+	headers = { "Accept": "application/json" }
 
-COMMANDS_HELP = {
-    "help": "Affiche cette aide avec la liste des commandes disponibles.",
-	"ping": "Répond avec 'Pong !' pour vérifier que le bot est en ligne.",
-	"jfs": "Recherche un média sur Jellyfin. Usage : !jfs [query]"
-}
+	async with httpx.AsyncClient() as client:
+		resp = await client.get(url, params=params, headers=headers)
+		if resp.status_code == 200:
+			return resp.json()
+		else:
+			return None
 
-async def cmd_help(bot, room: MatrixRoom, event: RoomMessageText, args: list):
-	plain_text = "Commandes disponibles :\n"
-	html_text = "<h4>Commandes disponibles :</h4><ul>"
+async def search_on_danbooru(bot, room, tags: list, nsfw: bool=True) -> dict:
+	search_tags = " ".join(tags)
+	if (len(tags) < 1 or len(tags) > 3):
+		await utils.send_msg(bot, room, "Veuillez fournir entre 1 et 3 tags pour la recherche.")
+		return
 
-	for cmd, desc in COMMANDS_HELP.items():
-		plain_text += f"- {bot.prefix}{cmd}: {desc}\n"
-		html_text += f"<li><strong>{bot.prefix}{cmd}</strong> : {desc}</li>"
-    
-	html_text += "</ul>"
+	if nsfw:
+		search_tags += " rating:e,q"
+	else:
+		search_tags += " rating:s,g"
+	try:
+		rep = await create_request(search_tags, nsfw)
+		if not rep or "file_url" not in rep:
+			await utils.send_msg(bot, room, "Aucun résultat trouvé pour les tags fournis.")
+			return None
+		return rep
+	except Exception as e:
+		await utils.send_msg(bot, room, f"Erreur lors de la requête à Danbooru : {e}")
+		return None
 
-	await bot.client.room_send(
-		room_id=room.room_id,
-		message_type="m.room.message",
-		content={
-			"msgtype": "m.text",
-			"body": plain_text,
-			"format": "org.matrix.custom.html",
-			"formatted_body": html_text}
-	)
-
-async def cmd_ping(bot, room: MatrixRoom, event: RoomMessageText, args: list):
-	await bot.client.room_send(
-		room_id=room.room_id,
-		message_type="m.room.message",
-		content={"msgtype": "m.text", "body": "Pong !"}
-	)
-
+# Bot command
 async def cmd_danbooru(bot, room: MatrixRoom, event: RoomMessageText, args: list):
 	if not args:
 		await utils.send_msg(bot, room, "Usage : !danbooru nsfw[yes/no] tags[...]")
@@ -96,11 +93,3 @@ async def cmd_danbooru(bot, room: MatrixRoom, event: RoomMessageText, args: list
 			}})
 		except Exception as e:
 			await utils.send_msg(bot, room, f"Erreur lors du traitement de l'image : {e}")
-
-COMMANDS_LIST = {
-	"help": cmd_help,
-	"ping": cmd_ping,
-	"danbooru": cmd_danbooru,
-	"jfs": cmds.jellyfin.cmd_jellyfin_search
-}
-

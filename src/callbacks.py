@@ -2,7 +2,8 @@ import asyncio
 from time import time as tm;
 from nio import MatrixRoom, RoomMessageText, InviteMemberEvent
 
-from commands import COMMANDS_LIST
+import utils.utils as utils
+from utils.command_helper import COMMANDS_LIST
 
 async def invite_callback(bot, room: MatrixRoom, event: InviteMemberEvent):
 	target_room_id = getattr(event, "room_id", None) or getattr(room, "room_id", None)
@@ -53,7 +54,7 @@ async def message_callback(bot, room: MatrixRoom, event: RoomMessageText):
 		cmd_name = cmd[0].lower()
 		args = cmd[1:]
 
-		func = COMMANDS_LIST.get(cmd_name)
+		func = COMMANDS_LIST.get(cmd_name, {}).get("ptr")
 		if func:
 			print(f"Exécution de la commande '{cmd_name}' avec les arguments {args} par {event.sender}")
 			await func(bot, room, event, args)

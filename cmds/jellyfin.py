@@ -1,7 +1,7 @@
 from nio import MatrixRoom, RoomMessageText, UploadResponse
 import httpx
 
-import utils
+import utils.utils as utils
 
 async def cmd_jellyfin_search(bot, room: MatrixRoom, event: RoomMessageText, args: list):
 	if not args:
