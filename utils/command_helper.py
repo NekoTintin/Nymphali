@@ -6,21 +6,25 @@ COMMANDS_LIST = {
 	"help": {
 		"ptr": cmd_help,
 		"desc": "Affiche la liste des commandes disponibles.",
-		"usage": "?help"
+		"usage": "?help",
+		"reactions": False
 	},
 	"ping": {
 		"ptr": cmd_ping,
 		"desc": "Répond avec 'Pong !' pour vérifier que le bot est en ligne.",
-		"usage": "?ping"
+		"usage": "?ping",
+		"reactions": False
 	},
 	"danbooru": {
 		"ptr": cmd_danbooru,
 		"desc": "Recherche une image sur Danbooru.",
-		"usage": "?danbooru nsfw[yes/no] tags[...]"
+		"usage": "?danbooru nsfw[yes/no] tags[...]",
+		"reactions": False
 	},
 	"jfs": {
 		"ptr": jellyfin.cmd_jellyfin_search,
 		"desc": "Recherche un média sur Jellyfin.",
-		"usage": "?jfs [recherche]"
+		"usage": "?jfs [recherche]",
+		"reactions": True
 	}
 }

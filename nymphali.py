@@ -3,7 +3,9 @@ import json
 import aiofiles
 from nio import AsyncClient, MatrixRoom, RoomMessageText, InviteMemberEvent
 
-import src.callbacks as callbacks
+from src import invite_callback
+from src import message_callback
+from src import reaction_callback
 from utils.utils import print_with_color
 
 CREDENTIALS_FILE = "data/credentials.json"
@@ -15,7 +17,7 @@ class NymphaliBot:
 		self.prefix = prefix
 		self.client	= None
 		self.state = True
-		self.jellyfin = dict
+		self.jellyfin = dict()
  
 	async def login(self):
 		async with aiofiles.open(self.credential_file, "r") as f:
@@ -31,15 +33,15 @@ class NymphaliBot:
 			"url": config["jellyfin_url"],
 			"api_key": config["jellyfin_api_key"]
 		})
- 
+
 		print_with_color("Nymphali Bot est connecté en tant que " + config["user_id"], "\033[94m")
 
 		# Callbacks
 		self.client.add_event_callback(
-			lambda room, event: callbacks.invite_callback(self, room, event), InviteMemberEvent)
+			lambda room, event: invite_callback.invite_callback(self, room, event), InviteMemberEvent)
  
 		self.client.add_event_callback(
-			lambda room, event: callbacks.message_callback(self, room, event), RoomMessageText)
+			lambda room, event: message_callback.message_callback(self, room, event), RoomMessageText)
 
 		while True:
 			try:

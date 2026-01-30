@@ -1,7 +1,9 @@
-from nio import MatrixRoom, RoomMessageText, UploadResponse
+from nio import MatrixRoom, RoomMessageText
 import httpx
 
 import utils.utils as utils
+
+emoji_list = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣"]
 
 async def cmd_jellyfin_search(bot, room: MatrixRoom, event: RoomMessageText, args: list):
 	if not args:
@@ -14,12 +16,12 @@ async def cmd_jellyfin_search(bot, room: MatrixRoom, event: RoomMessageText, arg
 		"IncludeItemTypes": "Movie,Series",
 		"Limit": 5,
 		"Recursive": "true",
-		"api_key": bot.jellyfin_api_key
+		"api_key": bot.jellyfin["api_key"]
 	}
 
 	async with httpx.AsyncClient() as client:
 		try:
-			resp = await client.get(f"{bot.jellyfin_url}/Items", params=params)
+			resp = await client.get(f"{bot.jellyfin['url']}/Items", params=params)
 			if resp.status_code != 200:
 				await utils.send_msg(bot, room, " ❌ Aucune réponse du serveur Jellyfin.")
 				return
@@ -33,15 +35,15 @@ async def cmd_jellyfin_search(bot, room: MatrixRoom, event: RoomMessageText, arg
 			plain_text = f"🔍 Résultats pour '{query}':\n"
 			html_text = f"<h4>Résultats pour '{query}':</h4><ul>"
 
-			for item in items:
+			for num, item in enumerate(items):
 				name = item.get("Name", "Inconnu")
 				year = item.get("ProductionYear", "N/A")
 				mtype = "🎬 Film" if item.get("Type") == "Movie" else "📺 Série"
-				plain_text += f"- {name} ({year}) {mtype}\n"
-				html_text += f"<li>{name} ({year}) {mtype}</li>"
+				plain_text += f"- {emoji_list[num]} {name} ({year}) {mtype}\n"
+				html_text += f"<li>{emoji_list[num]} {name} ({year}) {mtype}</li>"
 
 			html_text += "</ul>"
-			await bot.client.room_send(
+			resp = await bot.client.room_send(
 				room_id=room.room_id,
 				message_type="m.room.message",
 				content={
@@ -51,5 +53,18 @@ async def cmd_jellyfin_search(bot, room: MatrixRoom, event: RoomMessageText, arg
 					"formatted_body": html_text
 				}
 			)
+
+			#for num, item in enumerate(items):
+			#	await bot.client.room_send(
+			#		room_id=room.room_id,
+			#		message_type="m.reaction",
+			#		content={
+			#			"m.relates_to": {
+			#				"rel_type": "m.annotation",
+			#				"event_id": resp.event_id,
+			#				"key": emoji_list[num]
+			#			}
+			#		}
+			#	)
 		except:
 			await utils.send_msg(bot, room, " ❌ Erreur d'accès au serveur Jellyfin.")
