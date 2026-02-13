@@ -8,6 +8,14 @@ from src import message_callback
 from src import reaction_callback
 from utils.utils import print_with_color
 
+sync_filter_dict = {
+    "room": {
+         "timeline": {
+        	"types": ["m.room.message", "m.room.member", "m.reaction"]
+        }
+    }
+}
+
 CREDENTIALS_FILE = "data/credentials.json"
 
 class NymphaliBot:
@@ -45,7 +53,9 @@ class NymphaliBot:
 
 		while True:
 			try:
-				await self.client.sync_forever(timeout=30000, full_state=self.state)
+				await self.client.sync_forever(timeout=30000, full_state=self.state, sync_filter=sync_filter_dict)
+				if self.state:
+					self.state = False
 			except Exception as e:
 				print_with_color(f"An error occurred during sync: {e}", "\033[91m")
 				self.state = False

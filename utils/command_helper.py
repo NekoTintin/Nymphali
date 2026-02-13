@@ -1,6 +1,6 @@
 from cmds.danbooru import cmd_danbooru
 import cmds.jellyfin as jellyfin
-from cmds.tools import cmd_ping, cmd_help
+from cmds.tools import cmd_ping, cmd_help, cmd_short_url
 
 COMMANDS_LIST = {
 	"help": {
@@ -26,5 +26,11 @@ COMMANDS_LIST = {
 		"desc": "Recherche un média sur Jellyfin.",
 		"usage": "?jfs [recherche]",
 		"reactions": True
-	}
+	},
+	"short": {
+		"ptr": cmd_short_url,
+		"desc": "Renvoie une URL courte.",
+		"usage": "?short [URL]",
+		"reactions": False
+	},
 }
