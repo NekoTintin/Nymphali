@@ -26,7 +26,8 @@ class NymphaliBot:
 		self.client	= None
 		self.state = True
 		self.jellyfin = dict()
- 
+		self.admins = []
+
 	async def login(self):
 		async with aiofiles.open(self.credential_file, "r") as f:
 			content = await f.read()
@@ -37,6 +38,7 @@ class NymphaliBot:
 		self.client.access_token = config["access_token"]
 		self.client.user_id = config["user_id"]
 		self.client.device_id = config["device_id"]
+		self.admins = config.get("admins", [])
 		self.jellyfin.update({
 			"url": config["jellyfin_url"],
 			"api_key": config["jellyfin_api_key"]
@@ -47,7 +49,7 @@ class NymphaliBot:
 		# Callbacks
 		self.client.add_event_callback(
 			lambda room, event: invite_callback.invite_callback(self, room, event), InviteMemberEvent)
- 
+
 		self.client.add_event_callback(
 			lambda room, event: message_callback.message_callback(self, room, event), RoomMessageText)
 
@@ -60,6 +62,9 @@ class NymphaliBot:
 				print_with_color(f"An error occurred during sync: {e}", "\033[91m")
 				self.state = False
 				await asyncio.sleep(5)
+
+	def is_admin(self, user_id: str) -> bool:
+		return user_id in self.admins
 
 async def main():
 	bot = NymphaliBot(CREDENTIALS_FILE)

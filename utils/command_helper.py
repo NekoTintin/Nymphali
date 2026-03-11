@@ -1,6 +1,7 @@
 from cmds.danbooru import cmd_danbooru
 import cmds.jellyfin as jellyfin
 from cmds.tools import cmd_ping, cmd_help, cmd_short_url
+from cmds.kemono import random_from_creator
 
 COMMANDS_LIST = {
 	"help": {
@@ -19,6 +20,12 @@ COMMANDS_LIST = {
 		"ptr": cmd_danbooru,
 		"desc": "Recherche une image sur Danbooru.",
 		"usage": "?danbooru nsfw[yes/no] tags[...]",
+		"reactions": False
+	},
+	"kemono": {
+		"ptr": random_from_creator,
+		"desc": "Recherche un post aléatoire d'un créateur sur Kemono.",
+		"usage": "?kemono [service] [créateur]",
 		"reactions": False
 	},
 	"jfs": {

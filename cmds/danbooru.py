@@ -6,10 +6,38 @@ from PIL import Image
 
 import utils.utils as utils
 
+async def dan_msg(bot, room, data: dict, nsfw):
+	artist = data.get("tag_string_artist", "inconnu")
+	post_id = data.get("id", "")
+	source_link = data.get("source", None)
+
+	danbooru_link = f"https://danbooru.donmai.us/posts/{post_id}"
+
+	body = f"Post de {artist} - Lien - Source"
+
+	formatted_body = f"Post de {artist} - <a href='{danbooru_link}'>Lien</a>"
+	if source_link:
+		formatted_body += f" - <a href='{source_link}'>Source</a>"
+
+	await bot.client.room_send(
+		room.room_id,
+		"m.room.message",
+		{
+			"msgtype": "m.text",
+			"body": body,
+			"format": "org.matrix.custom.html",
+			"formatted_body": formatted_body
+		}
+	)
+
+
 async def create_request(tags: str, nsfw: bool) -> dict:
 	url = "https://danbooru.donmai.us/posts/random.json"
 	params = { "tags": tags }
-	headers = { "Accept": "application/json" }
+	headers = { 
+		"Accept": "application/json",
+		"User-Agent": "NymphaliBot/1.0 (Matrix Bot)"
+	}
 
 	async with httpx.AsyncClient() as client:
 		resp = await client.get(url, params=params, headers=headers)
@@ -30,8 +58,11 @@ async def search_on_danbooru(bot, room, tags: list, nsfw: bool=True) -> dict:
 		search_tags += " rating:s,g"
 	try:
 		rep = await create_request(search_tags, nsfw)
-		if not rep or "file_url" not in rep:
+		if not rep:
 			await utils.send_msg(bot, room, "Aucun résultat trouvé pour les tags fournis.")
+			return None
+		if "file_url" not in rep:
+			await utils.send_msg(bot, room, "Résultat trouvé mais pas d'URL de fichier.")
 			return None
 		return rep
 	except Exception as e:
@@ -42,6 +73,9 @@ async def search_on_danbooru(bot, room, tags: list, nsfw: bool=True) -> dict:
 async def cmd_danbooru(bot, room: MatrixRoom, event: RoomMessageText, args: list):
 	if not args:
 		await utils.send_msg(bot, room, "Usage : !danbooru nsfw[yes/no] tags[...]")
+		return
+	if len(args) < 2 or len(args) > 4:
+		await utils.send_msg(bot, room, f"Erreur: Danbooru demande au moins 1 tag et au max 2 tags.")
 		return
 
 	if args[0].lower() not in ["yes", "no"]:
@@ -55,9 +89,10 @@ async def cmd_danbooru(bot, room: MatrixRoom, event: RoomMessageText, args: list
 
 	async with httpx.AsyncClient() as client:
 		try:
-			rep = await client.get(data["file_url"])
+			headers = {"User-Agent": "NymphaliBot/1.0 (Matrix Bot)"}
+			rep = await client.get(data["file_url"], headers=headers)
 			if rep.status_code != 200:
-				await utils.send_msg(bot, room, "Erreur lors du téléchargement de l'image.")
+				await utils.send_msg(bot, room, f"Erreur lors du téléchargement de l'image (code {rep.status_code}).")
 				return
 
 			image_bytes = rep.content
@@ -78,18 +113,29 @@ async def cmd_danbooru(bot, room: MatrixRoom, event: RoomMessageText, args: list
 				filesize=len(image_bytes)
 			)
 
+			await dan_msg(bot, room, data, nsfw)
 			if isinstance(resp, UploadResponse):
+				content = {
+					"msgtype": "m.image",
+					"body": filename,
+					"url": resp.content_uri,
+					"info": {
+					    "mimetype": mime_type,
+					    "size": len(image_bytes),
+					    "w": width,
+					    "h": height
+					}
+				}
+
+				if nsfw:
+					content["body"] = f"[SPOILER NSFW] {filename}"
+					content["format"] = "org.matrix.custom.html"
+					content["formatted_body"] = f'<span data-mx-spoiler="Contenu NSFW">Image : {filename}</span>'
+
 				await bot.client.room_send(
 					room.room_id,
 					"m.room.message",
-					{	"msgtype": "m.image",
-						"body": filename,
-						"url": resp.content_uri,
-						"info": {
-							"mimetype": mime_type,
-							"size": len(image_bytes),
-							"w": width,
-							"h": height
-			}})
+					content
+				)
 		except Exception as e:
 			await utils.send_msg(bot, room, f"Erreur lors du traitement de l'image : {e}")

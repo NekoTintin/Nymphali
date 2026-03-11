@@ -4,13 +4,13 @@ from nio import MatrixRoom, RoomMessageText
 from utils.command_helper import COMMANDS_LIST
 
 async def message_callback(bot, room: MatrixRoom, event: RoomMessageText):
-	# Skip les messages du bot lui-même ou trop anciens 
 	if event.sender == bot.client.user_id:
 		return
 	if event.server_timestamp < int(tm() * 1000) - 30000:
 		return
 
 	print(f"Message reçu dans la salle {room.room_id} de {event.sender}: {event.body}")
+	print(f"DEBUG: Sender ID='{event.sender}' | Bot Admin List={bot.admins}")
 
 	msg = event.body.strip()
 	if msg.startswith(bot.prefix):
