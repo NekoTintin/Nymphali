@@ -1,6 +1,6 @@
 from cmds.danbooru import cmd_danbooru
 import cmds.jellyfin as jellyfin
-from cmds.tools import cmd_ping, cmd_help, cmd_short_url
+from cmds.tools import cmd_ping, cmd_help, cmd_short_url, cmd_clear_msg
 from cmds.kemono import random_from_creator
 
 COMMANDS_LIST = {
@@ -19,7 +19,7 @@ COMMANDS_LIST = {
 	"danbooru": {
 		"ptr": cmd_danbooru,
 		"desc": "Recherche une image sur Danbooru.",
-		"usage": "?danbooru nsfw[yes/no] tags[...]",
+		"usage": "?danbooru nsfw[yes/no] number[1, 2, 3, ...] tags[...]",
 		"reactions": False
 	},
 	"kemono": {
@@ -40,4 +40,10 @@ COMMANDS_LIST = {
 		"usage": "?short [URL]",
 		"reactions": False
 	},
+	"clear": {
+		"ptr": cmd_clear_msg,
+		"desc": "Efface les X derniers messages",
+		"usage": "?clear [number]",
+		"reactions": False
+	}
 }

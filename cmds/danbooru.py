@@ -71,71 +71,79 @@ async def search_on_danbooru(bot, room, tags: list, nsfw: bool=True) -> dict:
 
 # Bot command
 async def cmd_danbooru(bot, room: MatrixRoom, event: RoomMessageText, args: list):
+	await bot.client.room_redact(room.room_id, event.event_id, reason="Nettoyage du message de commande")
 	if not args:
-		await utils.send_msg(bot, room, "Usage : !danbooru nsfw[yes/no] tags[...]")
+		await utils.send_msg(bot, room, "Usage : !danbooru nsfw[yes/no] number[0,1,2,...] tags[...]")
 		return
-	if len(args) < 2 or len(args) > 4:
+	if len(args) < 3 or len(args) > 5:
 		await utils.send_msg(bot, room, f"Erreur: Danbooru demande au moins 1 tag et au max 2 tags.")
+		return
+	if (int(args[1]) < 0 or int(args[1]) > 20):
+		await utils.send_msg(bot, room, f"Erreur: Trop d'images demandées.")
 		return
 
 	if args[0].lower() not in ["yes", "no"]:
 		return
 	nsfw = args[0].lower() == "yes"
-	tags = args[1:]
- 
-	data = await search_on_danbooru(bot, room, tags, nsfw)
-	if not data or not "file_url" in data:
-		return
+	tags = args[2:]
+	
+	num = int(args[1])
+	img_list = []
+	for idx in range(num):
+		img_list.append(await search_on_danbooru(bot, room, tags, nsfw))
+		if not img_list[idx] or not "file_url" in img_list[idx]:
+			img_list[idx] = None
 
-	async with httpx.AsyncClient() as client:
-		try:
-			headers = {"User-Agent": "NymphaliBot/1.0 (Matrix Bot)"}
-			rep = await client.get(data["file_url"], headers=headers)
-			if rep.status_code != 200:
-				await utils.send_msg(bot, room, f"Erreur lors du téléchargement de l'image (code {rep.status_code}).")
-				return
+	errors_count = 0
+	for elem in img_list:
+		if elem == None:
+			errors_count += 1
+		async with httpx.AsyncClient() as client:
+			try:
+				headers = {"User-Agent": "NymphaliBot/1.0 (Matrix Bot)"}
+				rep = await client.get(elem["file_url"], headers=headers)
+				if rep.status_code != 200:
+					await utils.send_msg(bot, room, f"Erreur lors du téléchargement de l'image (code {rep.status_code}).")
+					return
 
-			image_bytes = rep.content
+				image_bytes = rep.content
 
-			with Image.open(io.BytesIO(image_bytes)) as img:
-				width, height = img.size
+				with Image.open(io.BytesIO(image_bytes)) as img:
+					width, height = img.size
 
-			mime_type = rep.headers.get("Content-Type", "image/png")
-			ext = mimetypes.guess_extension(mime_type) or ".jpg"
-			filename = f"danbooru_{data.get('id', 'image')}{ext}"
+				mime_type = rep.headers.get("Content-Type", "image/png")
+				ext = mimetypes.guess_extension(mime_type) or ".jpg"
+				filename = f"danbooru_{elem.get('id', 'image')}{ext}"
 
-			image_stream = io.BytesIO(image_bytes)
+				image_stream = io.BytesIO(image_bytes)
 
-			resp, maybe_key = await bot.client.upload(
-				image_stream,
-				content_type=mime_type,
-				filename=filename,
-				filesize=len(image_bytes)
-			)
-
-			await dan_msg(bot, room, data, nsfw)
-			if isinstance(resp, UploadResponse):
-				content = {
-					"msgtype": "m.image",
-					"body": filename,
-					"url": resp.content_uri,
-					"info": {
-					    "mimetype": mime_type,
-					    "size": len(image_bytes),
-					    "w": width,
-					    "h": height
-					}
-				}
-
-				if nsfw:
-					content["body"] = f"[SPOILER NSFW] {filename}"
-					content["format"] = "org.matrix.custom.html"
-					content["formatted_body"] = f'<span data-mx-spoiler="Contenu NSFW">Image : {filename}</span>'
-
-				await bot.client.room_send(
-					room.room_id,
-					"m.room.message",
-					content
+				resp, maybe_key = await bot.client.upload(
+					image_stream,
+					content_type=mime_type,
+					filename=filename,
+					filesize=len(image_bytes)
 				)
-		except Exception as e:
-			await utils.send_msg(bot, room, f"Erreur lors du traitement de l'image : {e}")
+
+				await dan_msg(bot, room, elem, nsfw)
+				if isinstance(resp, UploadResponse):
+					content = {
+						"msgtype": "m.image",
+						"body": filename,
+						"url": resp.content_uri,
+						"info": {
+						    "mimetype": mime_type,
+						    "size": len(image_bytes),
+						    "w": width,
+						    "h": height
+						}
+					}
+					await bot.client.room_send(
+						room.room_id,
+						"m.room.message",
+						content
+					)
+			except Exception as e:
+				await utils.send_msg(bot, room, f"Erreur lors du traitement de l'image : {e}")
+	
+	if errors_count > 1:
+		await utils.send_msg(bot, room, f"Nombre d'erreur : {errors_count}.")
